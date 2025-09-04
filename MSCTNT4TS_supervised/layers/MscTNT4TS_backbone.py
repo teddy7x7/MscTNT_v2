@@ -47,9 +47,7 @@ class MscTNT4TS_backbone(nn.Module):
                 inner_tcn_drop=0.1, outer_tcn_drop=0.1,
                 inner_attn_dropout = 0., inner_proj_dropout = 0.,
                 outer_attn_dropout = 0., outer_proj_dropout = 0.,
-                # <20240803> 讓repatching conv 可以被拿掉
                 inner_repatching=True, outer_repatching=True
-                # </20240803> 讓repatching conv 可以被拿掉
                 ):
                         
         super().__init__()

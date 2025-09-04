@@ -121,9 +121,9 @@ if __name__ == '__main__':
     parser.add_argument('--patch_stride', type=int, default=16, help='patch stride')            
     parser.add_argument('--subpatch_len', type=int, default=4, help='subpatch length')
     parser.add_argument('--subpatch_stride', type=int, default=4, help='subpatch stride')
+    
     parser.add_argument('--early_outer_tcn_layers', type=int, default=6, help='early tcn layers number for outer in the first block of MscTNT')
     parser.add_argument('--outer_tcn_layers', type=int, default=2, help='tcn layers number for outer after the first block of MscTNT')
-
     parser.add_argument('--early_inner_tcn_layers', type=int, default=3, help='early conv layers number for inner')
     parser.add_argument('--inner_tcn_layers', type=int, default=2, help='conv layers number for inner') 
     parser.add_argument('--inner_tcn_drop', type=float, default=0.1, help='inner_tcn_drop')
