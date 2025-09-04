@@ -1,0 +1,14 @@
+.git/
+.vscode/
+PatchTST_self_supervised/
+tnt_pytorch/
+logs/
+MSCTNT4TS_supervised_backups/
+MSCTNT4TS_self_supervised/
+MSCTNT4TS_supervised/checkpoints/
+MSCTNT4TS_supervised/results/
+MSCTNT4TS_supervised/test_results/
+MSCTNT4TS_supervised/dataset/
+MSCTNT4TS_supervised/logs/
+MSCTNT4TS_supervised/result.txt
+__pycache__/
