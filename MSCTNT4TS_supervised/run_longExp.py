@@ -70,9 +70,11 @@ if __name__ == '__main__':
     parser.add_argument('--enc_in', type=int, default=7, help='encoder input size') # DLinear with --individual, use this hyperparameter as the number of channels
     parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
     parser.add_argument('--c_out', type=int, default=7, help='output size')
-    parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
-    parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
     parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
+    
+    # PatchTST
+    parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
+    parser.add_argument('--n_heads', type=int, default=8, help='num of heads') 
     parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
     parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
     parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')
@@ -122,7 +124,6 @@ if __name__ == '__main__':
     parser.add_argument('--early_outer_tcn_layers', type=int, default=6, help='early tcn layers number for outer in the first block of MscTNT')
     parser.add_argument('--outer_tcn_layers', type=int, default=2, help='tcn layers number for outer after the first block of MscTNT')
 
-    # need to refine the backbone code to make inner part can be 0 layer, still work on it
     parser.add_argument('--early_inner_tcn_layers', type=int, default=3, help='early conv layers number for inner')
     parser.add_argument('--inner_tcn_layers', type=int, default=2, help='conv layers number for inner') 
     parser.add_argument('--inner_tcn_drop', type=float, default=0.1, help='inner_tcn_drop')
@@ -134,20 +135,11 @@ if __name__ == '__main__':
     parser.add_argument('--outer_proj_dropout', type=float, default=0., help='transformer outer_proj_dropout')
     parser.add_argument('--inner_proj_dropout', type=float, default=0., help='transformer inner_proj_dropout')
     
-    # <20240803> 讓repatching conv 可以被拿掉
     parser.add_argument('--outer_repatching', type=bool, default=True, help='to use outer_repatching conv at the end of the encoder block or not')
     parser.add_argument('--inner_repatching', type=bool, default=True, help='to use inner_repatching conv at the end of the encoder block or not')
-    # </20240803>
-        
-    
-    
+ 
     # shuffle test, testing whether model learn the temporal order relation between input and output
     parser.add_argument('--shuffle_method', type=str, default=None, help='method used in shuffle test options:[None, RandShuf,HalfEx ]')
-    
-    #  deprecated
-    # parser.add_argument('--noRevinScale', type=float, default=0.5, help='no Revin part scaling factor')
-    # parser.add_argument('--revin_eps', type=float, default=1e-5, help='a value added for numerical stability')
-    # parser.add_argument('--reduce_dim_tcn_channel_list', type=str, default=None, help='reduce c_in before get into the model')
 
     
     args = parser.parse_args()

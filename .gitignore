@@ -1,5 +1,6 @@
 .git/
 .vscode/
+MSCTNT4TS_supervised/.vscode
 PatchTST_self_supervised/
 tnt_pytorch/
 logs/
