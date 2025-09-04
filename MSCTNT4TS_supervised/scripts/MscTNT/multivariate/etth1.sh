@@ -10,7 +10,7 @@ model_name=MscTNT4TS
 
 root_path_name=./dataset/
 data_path_name=ETTh1.csv
-model_id_name=ETTh1_noRepatching_20250904
+model_id_name=ETTh1_noRepatching_20250904-2
 data_name=ETTh1
 
 random_seed=2021

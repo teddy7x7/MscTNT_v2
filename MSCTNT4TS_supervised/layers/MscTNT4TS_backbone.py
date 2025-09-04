@@ -91,9 +91,7 @@ class MscTNT4TS_backbone(nn.Module):
                                      inner_tcn_drop=inner_tcn_drop, outer_tcn_drop=outer_tcn_drop,
                                      inner_attn_dropout = inner_attn_dropout, inner_proj_dropout = inner_proj_dropout,
                                      outer_attn_dropout = outer_attn_dropout, outer_proj_dropout = outer_proj_dropout,
-                                     # <20240803> 讓repatching conv 可以被拿掉
                                      inner_repatching=inner_repatching, outer_repatching=outer_repatching
-                                     # </20240803> 讓repatching conv 可以被拿掉
                                      )
 
 
@@ -341,9 +339,7 @@ class MscTSTEncoder(nn.Module):
                  inner_tcn_drop=0.1, outer_tcn_drop=0.1,
                  inner_attn_dropout = 0., inner_proj_dropout = 0.,
                  outer_attn_dropout = 0., outer_proj_dropout = 0.,
-                 # <20240803> 讓repatching conv 可以被拿掉
                 inner_repatching=True, outer_repatching=True
-                # </20240803> 讓repatching conv 可以被拿掉
                 ):
                  
         super().__init__()
@@ -355,18 +351,13 @@ class MscTSTEncoder(nn.Module):
                                                             outer_num_heads=outer_num_heads, inner_num_heads=inner_num_heads, 
                                                             inner_d_k=inner_d_k, inner_d_v=inner_d_v, inner_mlp_ratio=inner_mlp_ratio,
                                                             outer_d_k=outer_d_k, outer_d_v=outer_d_v, outer_mlp_ratio=outer_mlp_ratio,
-                                                            # 重點改在這裡
                                                             inner_tcn_layers=early_inner_tcn_layers, outer_tcn_layers=early_outer_tcn_layers,
-                                                            # /重點改在這裡
-                                                            # norm=norm, attn_dropout=attn_dropout, dropout=dropout, bias=True, activation=activation, pre_norm=pre_norm, qkv_bias=qkv_bias, se=se,
                                                             res_attention=res_attention,
                                                             store_attn=store_attn,
                                                             inner_tcn_drop=inner_tcn_drop, outer_tcn_drop=outer_tcn_drop,
                                                             inner_attn_dropout = inner_attn_dropout, inner_proj_dropout = inner_proj_dropout,
                                                             outer_attn_dropout = outer_attn_dropout, outer_proj_dropout = outer_proj_dropout,
-                                                            # <20240803> 讓repatching conv 可以被拿掉
                                                             inner_repatching=False, outer_repatching=outer_repatching
-                                                            # </20240803> 讓repatching conv 可以被拿掉
                                                             )])
         else:
             model_list=[MscTSTEncoderLayer(patch_num=patch_num, subpatch_num=subpatch_num, outer_d_model=outer_d_model,
@@ -374,10 +365,7 @@ class MscTSTEncoder(nn.Module):
                                                             outer_num_heads=outer_num_heads, inner_num_heads=inner_num_heads, 
                                                             inner_d_k=inner_d_k, inner_d_v=inner_d_v, inner_mlp_ratio=inner_mlp_ratio,
                                                             outer_d_k=outer_d_k, outer_d_v=outer_d_v, outer_mlp_ratio=outer_mlp_ratio,
-                                                            # 重點改在這裡
                                                             inner_tcn_layers=early_inner_tcn_layers, outer_tcn_layers=early_outer_tcn_layers,
-                                                            # /重點改在這裡
-                                                            # norm=norm, attn_dropout=attn_dropout, dropout=dropout, bias=True, activation=activation, pre_norm=pre_norm, qkv_bias=qkv_bias, se=se,
                                                             res_attention=res_attention,
                                                             store_attn=store_attn,
                                                             inner_tcn_drop=inner_tcn_drop, outer_tcn_drop=outer_tcn_drop,
@@ -389,10 +377,7 @@ class MscTSTEncoder(nn.Module):
                                                             outer_num_heads=outer_num_heads, inner_num_heads=inner_num_heads, 
                                                             inner_d_k=inner_d_k, inner_d_v=inner_d_v, inner_mlp_ratio=inner_mlp_ratio,
                                                             outer_d_k=outer_d_k, outer_d_v=outer_d_v, outer_mlp_ratio=outer_mlp_ratio,
-                                                            # 重點改在這裡
                                                             inner_tcn_layers=inner_tcn_layers, outer_tcn_layers=outer_tcn_layers,
-                                                            # /重點改在這裡
-                                                            # norm=norm, attn_dropout=attn_dropout, dropout=dropout, bias=True,activation=activation, pre_norm=pre_norm, qkv_bias=qkv_bias, se=se,
                                                             res_attention=res_attention,
                                                             store_attn=store_attn,
                                                             inner_tcn_drop=inner_tcn_drop, outer_tcn_drop=outer_tcn_drop,
@@ -403,66 +388,42 @@ class MscTSTEncoder(nn.Module):
             self.layers = nn.ModuleList(model_list)
 
 
-        # </20240422>
         self.res_attention = res_attention
         self.n_vars = None
         self.has_inner = inner_d_model > 0
 
     def forward(self, n_vars:int, outer_token:Tensor, inner_token:Optional[Tensor]=None, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None):
-        # <20240324 ver2 TNT ver>
         # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
         # outer_token: [bs*nvars x patch_num x outer_dim]
-        # </20240324 ver2 TNT ver>
-
 
         output_inner = inner_token
         output_outer = outer_token
 
         self.n_vars = n_vars
 
-        # <20240316> patchtst 有使用attention累加到下一layer的方法，所以修改scores成兩種，且MscTSTEncoderLayer也應該將forward的輸入的interface也修正
         outer_scores = None
         inner_scores = None
-        # </20240316>
 
         if self.res_attention:
             if self.has_inner:
-                # TODO 檢查這裡輸進去的矩陣到底傳的對不對、size對不對
-                # TODO 裡面應該還要返回 attention score，去MscTSTEncoderLayer中實現
-                # TODO 檢查MscTSTEncoderLayer返回的值的順序是對應下面的順序
-                # TODO 應該在這裡也要檢查是否有inner!!!! 然後接每一個mod，即MscTSTEncoderLayer的返回值
-                for mod in self.layers: output_inner, output_outer, outer_scores, inner_scores = mod(n_vars=self.n_vars, inner_tokens=output_inner, outer_tokens=output_outer,
-                                                            # <20240316> patchtst 有使用attention累加到下一layer的方法，所以修改scores成兩種，且MscTSTEncoderLayer也應該將forward的輸入的interface也修正
+                for mod in self.layers: output_inner, output_outer, outer_scores, inner_scores = mod(n_vars=self.n_vars, inner_tokens=output_inner, 
+                                                            outer_tokens=output_outer,
                                                             outer_prev=outer_scores,
                                                             inner_prev=inner_scores,
-                                                            # </20240316>
                                                             key_padding_mask=key_padding_mask, attn_mask=attn_mask)
             else:
                 for mod in self.layers: output_outer, outer_scores = mod(n_vars=self.n_vars, inner_tokens=None, outer_token=output_outer,
                                                           outer_prev=outer_scores, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
 
-            
         else:
             if self.has_inner:
-            # TODO 檢查MscTSTEncoderLayer返回的值的順序是對應下面的順序
                 for mod in self.layers: output_inner, output_outer = mod(n_vars=self.n_vars, inner_tokens=output_inner, outer_token=output_outer,
                                                                         key_padding_mask=key_padding_mask, attn_mask=attn_mask)
             else:
                 for mod in self.layers: output_outer = mod(n_vars=self.n_vars, inner_tokens=None, outer_token=output_outer,
                                                                         key_padding_mask=key_padding_mask, attn_mask=attn_mask)
 
-        # 在做以下操作之前 output_outer: [bs*nvars x patch_num x outer_dim]
-        # <20240630> 把這裡註解掉，把reshape的部分移到backbone的head之前，這樣可以在reshape前先走還原維度tcn。改成直接返回mod返回的矩陣形狀[bs*nvars x patch_num x outer_dim]
-        # 換成下面那一組return
-        # output_outer = torch.reshape(output_outer, (-1, self.n_vars, outer_token.shape[-2], outer_token.shape[-1])) # output_outer: [bs x nvars x patch_num x outer_dim]
-        # output_outer = output_outer.permute(0, 1, 3, 2)                                                             # output_outer: [bs x nvars x outer_dim x patch_num]
-
-        # return output_outer  # output_outer: [bs x nvars x outer_dim x patch_num]
-        # </20240630>
-        # <20240630> 換成這一組return
-        return output_outer  # output_outer: [bs x nvars x outer_dim x patch_num] ???? 應該變成別的了? 因沒有做reshape? reshape拿到外面呼叫這個的去做了?
-
-        # </20240630>
+        return output_outer
 
 
 class MscTSTEncoderLayer(nn.Module):
@@ -475,9 +436,7 @@ class MscTSTEncoderLayer(nn.Module):
                  inner_tcn_drop = 0.1, outer_tcn_drop = 0.1,
                  inner_attn_dropout = 0., inner_proj_dropout = 0.,
                  outer_attn_dropout = 0., outer_proj_dropout = 0.,
-                 # <20240803> 讓repatching conv 可以被拿掉
                 inner_repatching=True, outer_repatching=True
-                 # </20240803> 讓repatching conv 可以被拿掉
                  ):
         
         super().__init__()
@@ -491,134 +450,68 @@ class MscTSTEncoderLayer(nn.Module):
 
             self.subpatch_num = subpatch_num
             self.inner_d_model = inner_d_model
-            # TODO 這樣是不是就直接可以用TSTENcoderLayer裡面的寫好的，就不需要在這寫下面這些了
             self.inner_encoder = TSTEncoderLayer(q_len=subpatch_num, d_model=inner_d_model, n_heads=inner_num_heads, store_attn=store_attn, 
                                                  d_k=inner_d_k, d_v=inner_d_v, mlp_ratio=inner_mlp_ratio,
                                                 attn_dropout=inner_attn_dropout, dropout=inner_proj_dropout, res_attention=res_attention)                                     
                                                 
-            # TODO TCN 吃的輸入為x
-            # param x: size of (Batch, input_channel, seq_len)
-            # return: size of (Batch, output_channel, seq_len)
-            
-            # <20240731> 變成可以接受0層
             if inner_tcn_layers>0:
                 self.inner_tcn = TemporalConvNet(num_inputs=inner_d_model, num_channels=[inner_d_model for i in range(inner_tcn_layers)], kernel_size=2, dropout=inner_tcn_drop)
-            # </20240731>
             
             self.tmpl_proj_ind_to_outd = nn.Linear(inner_d_model, outer_d_model)
             self.tmpl_proj1_norm = nn.BatchNorm1d(outer_d_model)
             self.tmpl_proj_sbptn_to_ptn = nn.Linear(subpatch_num, patch_num)
             self.tmpl_proj2_norm = nn.BatchNorm1d(outer_d_model)
 
-            # <20240324>
             self.tmpl_proj = nn.Linear(subpatch_num*inner_d_model, outer_d_model)
             self.tmpl_proj_norm = nn.BatchNorm1d(outer_d_model)
 
-            # </20240324>
-
-            # <20240302> inner_token被改回保有原本size較小
-            # <20240803> 讓repatching conv 可以被拿掉
             self.inner_repatching = inner_repatching
-            # </20240803> 讓repatching conv 可以被拿掉
+
             if self.inner_repatching:
                 self.inner_repatching_conv = nn.Conv1d(in_channels=inner_d_model, out_channels=inner_d_model, kernel_size=3, stride=1, padding=1)
-            # self.inner_down_proj = nn.Linear(outer_d_model*patch_num, inner_d_model*subpatch_num)
-            # self.inner_down_norm = nn.BatchNorm1d(inner_d_model)
-            # </20240302>
         
         # Outer
-        # TODO 這樣是不是就直接可以用TSTENcoderLayer裡面的寫好的，就不需要在這寫下面這些了
         self.outer_encoder = TSTEncoderLayer(q_len=patch_num, d_model=outer_d_model, n_heads=outer_num_heads, 
                                              d_k=outer_d_k, d_v=outer_d_v, mlp_ratio=outer_mlp_ratio,
                                              store_attn=store_attn, 
-                                            #  attn_dropout=attn_dropout, dropout=dropout, res_attention=res_attention)
-                                            # <20240519>
                                              attn_dropout=outer_attn_dropout, dropout=outer_proj_dropout, res_attention=res_attention)
-                                            # <20240519>
-            # TODO TCN 吃的輸入為x
-            # param x: size of (Batch, input_channel, seq_len)
-            # return: size of (Batch, output_channel, seq_len)
 
-        # <20240731> 變成可以接受0層
         if outer_tcn_layers>0:
             self.outer_tcn = TemporalConvNet(num_inputs=outer_d_model, num_channels=[outer_d_model for i in range(outer_tcn_layers)], kernel_size=2, dropout=outer_tcn_drop)
-        # </20240731>
-        
-        # <20240803> 讓repatching conv 可以被拿掉
+
         self.outer_repatching = outer_repatching
         if self.outer_repatching:
-        # </20240803> 讓repatching conv 可以被拿掉  
             self.outer_repatching_conv = nn.Conv1d(in_channels=outer_d_model, out_channels=outer_d_model, kernel_size=3, stride=1, padding=1)
         
 
     def forward(self, n_vars:int, inner_tokens:Tensor, outer_tokens:Tensor, 
                 outer_prev:Optional[Tensor]=None, inner_prev:Optional[Tensor]=None, 
                 key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None) -> Tensor:
-        
-        # TODO check # inner_token: [bs*nvars x subpatch_num x inner_dim]
-        #            # outer_token: [bs*nvars x patch_num x outer_dim]
-
-
-        # <20240324 ver2 TNT ver>
-        # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-        # outer_token: [bs*nvars x patch_num x outer_dim]
-        # </20240324 ver2 TNT ver>
-
-
         if self.has_inner:
-            # 1. 先抓IInner細節，inner token先經過 Inner tcn，再經過 Inner transformer
+            # 1. 先抓Inner細節，inner token先經過 Inner tcn，再經過 Inner transformer
             if self.res_attention:
-                # <20240302>inner應該不需要用前一層的attention score所以這裡這樣做是不是多餘的?</>
-                # inner_tokens, inner_scores = self.inner_encoder(inner_tokens, prev=inner_prev) #check矩陣size，應該還是要保持輸入時的形狀，即 inner_token: [bs*nvars x subpatch_num x inner_dim]
-                # <20240324 ver2 TNT ver>
-                inner_tokens, inner_scores = self.inner_encoder(inner_tokens, prev=inner_prev) #check矩陣size，應該還是要保持輸入時的形狀，即 inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-                # </20240324 ver2 TNT ver>
-
-
+                inner_tokens, inner_scores = self.inner_encoder(inner_tokens, prev=inner_prev)
             else:
-                # <20240731> 變成可以接受0層
-                # <20240629> 嘗試no InTCN
-                # # <20240629> inner tcn 應該要放到inner encoder 之前才對? 所以把以下註解，copy至這裡試試
-                # # <20240324 ver2 TNT ver>
-
-                # TCN 吃的輸入為x
-                # param x: size of (Batch, input_channel, seq_len)
-                # return: size of (Batch, output_channel, seq_len)
-                # 所以應該把inner_dim當作輸入tcn中 channel 的維度、subpatch_num作為seq_len維度，所以應該做reshape，將subpatch_num的維度與inner_dim維度交換
-                # reshape 前 inner_token: [bs*nvars x subpatch_num x inner_dim]
+                # inner_token: [bs*nvars x subpatch_num x inner_dim]
                 if self.inner_tcn_layers>0:
-                    inner_tokens = inner_tokens.permute(0, 2, 1) #check是否交換成功得到 inner_token: [bs*nvars*patch_num x inner_dim x subpatch_num]
+                    inner_tokens = inner_tokens.permute(0, 2, 1) # inner_token: [bs*nvars*patch_num x inner_dim x subpatch_num]
                     inner_tokens = self.inner_tcn(inner_tokens) 
-                    inner_tokens = inner_tokens.permute(0, 2, 1) #check矩陣size，要恢復成原本形狀，即 inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-                # # </20240324 ver2 TNT ver>
-                # # </20240629> inner tcn 應該要放到inner encoder 之前才對? 所以把以下註解，copy至這裡試試
-                # </20240629>
-                # </20240731> 變成可以接受0層
+                    inner_tokens = inner_tokens.permute(0, 2, 1) # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
 
-
-                # <20240324 ver2 TNT ver>
-                inner_tokens = self.inner_encoder(inner_tokens) #check矩陣size，應該還是要保持輸入時的形狀，即 inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-                # </20240324 ver2 TNT ver>
-
+                inner_tokens = self.inner_encoder(inner_tokens)  # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
 
             # 2. Outer token 在輸入Outer transformer 之前先經過 outer tcn 處理
             
-            # <20240731> 變成可以接受0層
-            # <20240629> 嘗試no TCN
             # TCN 應該把outer_dim當作輸入tcn中 channel 的維度、subpatch_num作為seq_len維度，所以應該做reshape，將patch_num的維度與outer_dim維度交換
             if self.outer_tcn_layers>0:
-                outer_tokens = outer_tokens.permute(0, 2, 1) #check是否交換成功得到 outer_token: [bs*nvars x outer_dim x patch_num]
+                outer_tokens = outer_tokens.permute(0, 2, 1) # outer_token: [bs*nvars x outer_dim x patch_num]
                 outer_tokens = self.outer_tcn(outer_tokens)
-                outer_tokens = outer_tokens.permute(0, 2, 1) #check矩陣size，要恢復成原本形狀，即 outer_token: [bs*nvars x patch_num x outer_dim]
-            # </20240629> 嘗試no TCN
-            # </20240731> 變成可以接受0層
-
+                outer_tokens = outer_tokens.permute(0, 2, 1) # outer_token: [bs*nvars x patch_num x outer_dim]
 
             # 3. 將 inner token 的資訊疊加outer token 上
-            # 此時 inner_token : [bs*nvars x subpatch_num x inner_dim]
+            #      inner_token : [bs*nvars x subpatch_num x inner_dim]
             #      outer_token : [bs*nvars x patch_num x outer_dim]
 
-            # <20240324 ver2 TNT ver>
             # 3.1 先取出需要用的每個維度的分量個數 
             bsnvarptchnum, sbptch_num, in_dim = inner_tokens.shape  # [bs*nvars*patch_num x subpatch_num x inner_dim]
             bsnvar, ptch_num, out_dim = outer_tokens.shape
@@ -631,16 +524,11 @@ class MscTSTEncoderLayer(nn.Module):
             
             outer_tokens = outer_tokens + self.tmpl_proj_norm(self.tmpl_proj(inner_tokens.reshape(bsnvar, ptch_num, sbptch_num*in_dim)).permute(0, 2, 1)).permute(0, 2, 1)
 
-
-            # </20240324 ver2 TNT ver>
             # TODO 檢查哪組是對的
             # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
             # outer_token: [bs*nvars x patch_num x outer_dim]
             # 此時 inner_token : [bs*nvars x sunpatch_num x inner_dim]
-            #      outer_token : [bs*nvars x patch_num x outer_dim]
-
-            # </20240302>
-            
+            #      outer_token : [bs*nvars x patch_num x outer_dim]       
 
         # 4. outer encoder
        
@@ -652,7 +540,6 @@ class MscTSTEncoderLayer(nn.Module):
 
         # 5. repatching
         # TODO inner跟outer分別做patching以及還原維度的投影
-        # 這裡 inner_tokens也會因為patching不斷的變小，所以是不是也應該放大以便每個layer可以對齊?! 應該要放多大? 看 inner transformer 的輸入size，這個size是 sequence length?! 應該不是d_model?
         # 5.1 repatching
         # 此時 inner_tokens : [bs*nvars, patch_num, outer_d_model]
         #      outer_token: [bs*nvars x patch_num x outer_dim]
@@ -685,15 +572,11 @@ class MscTSTEncoderLayer(nn.Module):
         else:
             if self.outer_repatching:
                 outer_tokens = self.outer_repatching_conv(outer_tokens.permute(0, 2, 1)).permute(0, 2, 1)
-            
-        # TODO 應該要投影到幾維??? 用reshape不用投影是否辦的到?
         
         # 5.3
         # TODO 最終要將 inner token 與 outer token 都reshape回以下形狀
         #      check # inner_token: [bs*nvars x subpatch_num x inner_dim]
         #            # outer_token: [bs*nvars x patch_num x outer_dim]
-
-        # TODO 應該要改成只返回一個?!!!!!!!!!!!!!!!!!!!!!!但先這樣? 以下還沒改完，要對應 attention score 跟 attention weight matrix 還沒有寫好怎麼返回
         if self.has_inner:
             if self.res_attention:
                 return inner_tokens, outer_tokens, outer_scores, inner_scores
@@ -730,7 +613,6 @@ class TSTEncoder(nn.Module):
 
 
 class TSTEncoderLayer(nn.Module):
-    # def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, d_ff=256, store_attn=False,
     def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, mlp_ratio=4, store_attn=False,
                  norm='BatchNorm', attn_dropout=0, dropout=0., bias=True, activation="gelu", res_attention=False, pre_norm=False):
         super().__init__()
@@ -768,15 +650,12 @@ class TSTEncoderLayer(nn.Module):
 
     def forward(self, src:Tensor, prev:Optional[Tensor]=None, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None) -> Tensor:
 
-        # TODO check # src = inner_token: [bs*nvars x subpatch_num x inner_dim] 或 outer_token: [bs*nvars x patch_num x outer_dim]
-
-
+        # src : inner_token: [bs*nvars x subpatch_num x inner_dim] or outer_token: [bs*nvars x patch_num x outer_dim]
         # Multi-Head attention sublayer
         if self.pre_norm:
             src = self.norm_attn(src)
 
         ## Multi-Head attention
-        # TODO res_attention指的是存attention score? 而store_attn指的是attention weight矩陣?
         if self.res_attention:
             src2, attn, scores = self.self_attn(src, src, src, prev, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
         else:
@@ -834,7 +713,7 @@ class _MultiheadAttention(nn.Module):
                 key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None):
         
         
-        # TODO check # Q = inner_token: [bs*nvars x subpatch_num x inner_dim] 或 outer_token: [bs*nvars x patch_num x outer_dim]
+        #  Q : inner_token: [bs*nvars x subpatch_num x inner_dim] or outer_token: [bs*nvars x patch_num x outer_dim]
 
         bs = Q.size(0)
 
