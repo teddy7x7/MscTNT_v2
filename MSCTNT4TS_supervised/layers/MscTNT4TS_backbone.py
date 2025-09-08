@@ -133,7 +133,7 @@ class MscTNT4TS_backbone(nn.Module):
         inner_token = outer_token.reshape(bs*nvr*pn, pl).unfold(dimension=-1, size=self.subpatch_len, step=self.subpatch_stride)    # [bs*nvars*patch_num x patch_len] > [bs*nvars*patch_num x subpatch_num x subpatch_len]
 
         # outer_token: [bs*nvars x patch_num x patch_len]
-        # inner_token: [bs*nvars x subpatch_num x subpatch_len]
+        # inner_token: [bs*nvars*patch_num x subpatch_num x subpatch_len]
 
 
         # 3. project token last dim to transformer input's d-dim
@@ -154,7 +154,7 @@ class MscTNT4TS_backbone(nn.Module):
         outer_token = outer_token.permute(0, 1, 3, 2)                            # [bs x nvars x outer_dim x patch_num]
 
         # 7. head
-        outer_token = self.head(outer_token)                                     # z: [bs x nvars x target_window] 
+        outer_token = self.head(outer_token)                                     # [bs x nvars x target_window] 
 
 
         # 8. denorm
@@ -488,7 +488,7 @@ class MscTSTEncoderLayer(nn.Module):
                 outer_prev:Optional[Tensor]=None, inner_prev:Optional[Tensor]=None, 
                 key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None) -> Tensor:
         if self.has_inner:
-            # 1. 先抓Inner細節，inner token先經過 Inner tcn，再經過 Inner transformer
+            # 1. inner tokens > Inner tcn > Inner transformer
             if self.res_attention:
                 inner_tokens, inner_scores = self.inner_encoder(inner_tokens, prev=inner_prev)
             else:
@@ -500,35 +500,32 @@ class MscTSTEncoderLayer(nn.Module):
 
                 inner_tokens = self.inner_encoder(inner_tokens)  # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
 
-            # 2. Outer token 在輸入Outer transformer 之前先經過 outer tcn 處理
+            # 2. outer tokens > Outer tcn > Outer transformer
             
-            # TCN 應該把outer_dim當作輸入tcn中 channel 的維度、subpatch_num作為seq_len維度，所以應該做reshape，將patch_num的維度與outer_dim維度交換
+            # outer_dim for tcn's channel dim, patch_num for tcn's seq_len dim, thus reshape outer_tokens, swap the dim of patch_num and outer_dim
             if self.outer_tcn_layers>0:
                 outer_tokens = outer_tokens.permute(0, 2, 1) # outer_token: [bs*nvars x outer_dim x patch_num]
                 outer_tokens = self.outer_tcn(outer_tokens)
                 outer_tokens = outer_tokens.permute(0, 2, 1) # outer_token: [bs*nvars x patch_num x outer_dim]
 
-            # 3. 將 inner token 的資訊疊加outer token 上
-            #      inner_token : [bs*nvars x subpatch_num x inner_dim]
-            #      outer_token : [bs*nvars x patch_num x outer_dim]
+            # 3. Add inner_tokens' information on to corresponding outer_token
+            #      inner_tokens : [bs*nvars*patch_num x subpatch_num x inner_dim]
+            #      outer_tokens : [bs*nvars x patch_num x outer_dim]
 
-            # 3.1 先取出需要用的每個維度的分量個數 
-            bsnvarptchnum, sbptch_num, in_dim = inner_tokens.shape  # [bs*nvars*patch_num x subpatch_num x inner_dim]
+            # 3.1 get the shape of tensors 
+            bsnvarptchnum, sbptch_num, in_dim = inner_tokens.shape  
             bsnvar, ptch_num, out_dim = outer_tokens.shape
             
-            # 3.2 將 inner token 疊加至 outer token 上，by 將inner_tokens reshape到對應outertoken的大小，再做投影轉換? 最後才疊加?
-            # 1. 先將inner的num維度拆出來，以及 subpatch_num 與 inner_dim 兩個維度合併 by "inner_tokens.reshape(bsnvar, ptch_num, sbptch_num*in_dim)"
-            # 2. 將其在投影 或 等大小的捲機 至 outer_token 的size，再疊加至 outertoken
-            #    即 [bs*nvars*patch_num x subpatch_num x inner_dim] >reshape> [bs*nvars x patch_num x subpatch_num*inner_dim] >linear> [bs*nvars x patch_num x outer_dim] >permute>
-            #    [bs*nvars x outer_dim x patch_num] >batchnorm1d> [bs*nvars x outer_dim x patch_num] >permute> [bs*nvars x patch_num x outer_dim]
+            # 3.2 For adding inner token on to the corresponding outer token, we should first reshape inner_tokens to the corresponding outer_tokens' shape by projecting. After that, the addition is performed.            
+            # 3.2.1 First, separate the patch_num from the first dimension, then merge the subpatch_num and inner_dim dimensions by inner_tokens.reshape(bsnvar, ptch_num, sbptch_num * in_dim).
+            # 3.2.2 Next, project inner_tokens to match the size of outer_tokens , and then add it to the outer_tokens.
             
+            # Breakdown: [bs*nvars*patch_num x subpatch_num x inner_dim] >reshape> [bs*nvars x patch_num x subpatch_num*inner_dim] >linear> [bs*nvars x patch_num x outer_dim] >permute> [bs*nvars x outer_dim x patch_num] >batchnorm1d> [bs*nvars x outer_dim x patch_num] >permute> [bs*nvars x patch_num x outer_dim]
+                 
             outer_tokens = outer_tokens + self.tmpl_proj_norm(self.tmpl_proj(inner_tokens.reshape(bsnvar, ptch_num, sbptch_num*in_dim)).permute(0, 2, 1)).permute(0, 2, 1)
 
-            # TODO 檢查哪組是對的
             # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-            # outer_token: [bs*nvars x patch_num x outer_dim]
-            # 此時 inner_token : [bs*nvars x sunpatch_num x inner_dim]
-            #      outer_token : [bs*nvars x patch_num x outer_dim]       
+            # outer_token: [bs*nvars x patch_num x outer_dim]      
 
         # 4. outer encoder
        
@@ -539,42 +536,20 @@ class MscTSTEncoderLayer(nn.Module):
 
 
         # 5. repatching
-        # TODO inner跟outer分別做patching以及還原維度的投影
-        # 5.1 repatching
-        # 此時 inner_tokens : [bs*nvars, patch_num, outer_d_model]
-        #      outer_token: [bs*nvars x patch_num x outer_dim]
-        #      先將inner 疊加至outer，像是residual一樣補回因果資訊，再分別repatching+投影到下一個重複層可以吃的shape by 使用 conv1d
-        #   即 inner_token: [bs*nvars x subpatch_num x inner_dim]
-        #      outer_token: [bs*nvars x patch_num x outer_dim]
+        # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
+        # outer_token: [bs*nvars x patch_num x outer_dim]
+
         if self.has_inner:
-
-            # <20240302> 希望 inner矩陣大小保持小點，所以把inner做完casual疊加的部分直接改成投影直接加到outer上，不會存到inner上
-            # 此時 inner_token : [bs*nvars x sunpatch_num x inner_dim]
-            #      outer_token : [bs*nvars x patch_num x outer_dim]
-
-            # <20240324 ver2 TNT ver>
-            # inner_token: [bs*nvars*patch_num x subpatch_num x inner_dim]
-            # outer_token: [bs*nvars x patch_num x outer_dim]
-            # </20240324 ver2 TNT ver>
-
-
-            # 5.2 inner repatching by conv1D
-            # conv1D 的輸入為:[N, C, L]，所以要先將token permute，再做conv1D，最後再permute回來
             if self.inner_repatching:
                 inner_tokens = self.inner_repatching_conv(inner_tokens.permute(0, 2, 1)).permute(0, 2, 1)
             if self.outer_repatching:
                 outer_tokens = self.outer_repatching_conv(outer_tokens.permute(0, 2, 1)).permute(0, 2, 1)
-            
-            # 此時 inner_token: [bs*nvars x subpatch_num x inner_dim]
-            #      outer_token: [bs*nvars x patch_num x outer_dim]
 
-            # </20240302>
         else:
             if self.outer_repatching:
                 outer_tokens = self.outer_repatching_conv(outer_tokens.permute(0, 2, 1)).permute(0, 2, 1)
         
         # 5.3
-        # TODO 最終要將 inner token 與 outer token 都reshape回以下形狀
         #      check # inner_token: [bs*nvars x subpatch_num x inner_dim]
         #            # outer_token: [bs*nvars x patch_num x outer_dim]
         if self.has_inner:

@@ -13,3 +13,4 @@ MSCTNT4TS_supervised/dataset/
 MSCTNT4TS_supervised/logs/
 MSCTNT4TS_supervised/result.txt
 __pycache__/
+MSCTNT4TS_supervised/run_plotLongExps.py
