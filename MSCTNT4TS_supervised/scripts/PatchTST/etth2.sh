@@ -10,7 +10,7 @@ model_name=PatchTST
 
 root_path_name=./dataset/
 data_path_name=ETTh2.csv
-model_id_name=ETTh2
+model_id_name=ETTh2_PatchTST42
 data_name=ETTh2
 
 random_seed=2021
@@ -21,7 +21,7 @@ do
       --is_training 1 \
       --root_path $root_path_name \
       --data_path $data_path_name \
-      --model_id $model_id_name_$seq_len'_'$pred_len \
+      --model_id $model_id_name'_'$seq_len'_'$pred_len \
       --model $model_name \
       --data $data_name \
       --features M \
