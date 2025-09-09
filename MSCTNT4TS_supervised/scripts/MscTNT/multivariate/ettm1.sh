@@ -10,19 +10,18 @@ model_name=MscTNT4TS
 
 root_path_name=./dataset/
 data_path_name=ETTm1.csv
-model_id_name=ETTm1_Final
+model_id_name=ETTm1_FIN
 data_name=ETTm1
 
 random_seed=2021
-# for pred_len in 192 336 720
-for pred_len in 96 
+for pred_len in 96 192 336 720 
 do
     python -u run_longExp.py \
       --random_seed $random_seed \
       --is_training 1 \
       --root_path $root_path_name \
       --data_path $data_path_name \
-      --model_id $model_id_name_$seq_len'_'$pred_len \
+      --model_id $model_id_name'_'$seq_len'_'$pred_len \
       --model $model_name \
       --data $data_name \
       --features M \
@@ -46,8 +45,8 @@ do
       --outer_proj_dropout 0.15 \
       --patch_len 180\
       --patch_stride 180\
-      --subpatch_len 45\
-      --subpatch_stride 45\
+      --subpatch_len 36\
+      --subpatch_stride 36\
       --des 'Exp' \
       --train_epochs 100\
       --patience 30\
@@ -57,8 +56,8 @@ do
       --revin 1\
       --subtract_last 0\
       --affine 0\
-      --early_inner_tcn_layers 3\
-      --early_outer_tcn_layers 3\
+      --early_inner_tcn_layers 0\
+      --early_outer_tcn_layers 0\
       --inner_tcn_layers 0\
       --outer_tcn_layers 0\
       --final_div_factor 10000\

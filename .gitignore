@@ -14,3 +14,5 @@ MSCTNT4TS_supervised/logs/
 MSCTNT4TS_supervised/result.txt
 __pycache__/
 MSCTNT4TS_supervised/run_plotLongExps.py
+MSCTNT4TS_supervised/logFile_expCostTime_sumup.py
+MSCTNT4TS_supervised/scripts/MscTNT/deprecated

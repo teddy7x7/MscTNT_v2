@@ -10,15 +10,11 @@ model_name=MscTNT4TS
 
 root_path_name=./dataset/
 data_path_name=national_illness.csv
-model_id_name=national_illness_forPlot
+model_id_name=national_illness_FIN
 data_name=custom
 
 random_seed=2021
-# for pred_len in 24 36 48 60
-for pred_len in 24
-# for pred_len in 36
-# for pred_len in 48
-# for pred_len in 60
+for pred_len in 24 36 48 60
 do 
     python -u run_longExp.py \
       --random_seed $random_seed \
@@ -41,8 +37,8 @@ do
       --inner_mlp_ratio 2\
       --pos_drop 0\
       --head_dropout 0.05\
-      --inner_tcn_drop 0.25 \
-      --outer_tcn_drop 0.25 \
+      --inner_tcn_drop 0.15 \
+      --outer_tcn_drop 0.05 \
       --inner_attn_dropout 0.05 \
       --outer_attn_dropout 0.05 \
       --inner_proj_dropout 0.25 \
@@ -52,7 +48,7 @@ do
       --subpatch_len 3\
       --subpatch_stride 3\
       --des 'Exp' \
-      --train_epochs 1\
+      --train_epochs 100\
       --patience 100\
       --lradj 'TST' \
       --itr 1 --batch_size 16 --learning_rate 0.0025 \
@@ -60,7 +56,7 @@ do
       --revin 1\
       --subtract_last 0\
       --affine 1\
-      --early_inner_tcn_layers 2\
+      --early_inner_tcn_layers 1\
       --early_outer_tcn_layers 2\
       --inner_tcn_layers 0\
       --outer_tcn_layers 0\

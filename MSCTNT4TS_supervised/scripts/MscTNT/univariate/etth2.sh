@@ -15,7 +15,7 @@ model_name=MscTNT4TS
 
 root_path_name=./dataset/
 data_path_name=ETTh2.csv
-model_id_name=ETTh2_tryUni2
+model_id_name=ETTh2_Uni
 data_name=ETTh2
 
 random_seed=2021
@@ -26,7 +26,7 @@ do
       --is_training 1 \
       --root_path $root_path_name \
       --data_path $data_path_name \
-      --model_id $model_id_name_$seq_len'_'$pred_len \
+      --model_id $model_id_name'_'$seq_len'_'$pred_len \
       --model $model_name \
       --data $data_name \
       --features S \
@@ -34,7 +34,6 @@ do
       --pred_len $pred_len \
       --enc_in 1 \
       --e_layers 1 \
-      --n_heads 4 \
       --outer_n_heads 4\
       --inner_n_heads 1\
       --outer_dim 12\
@@ -64,8 +63,10 @@ do
       --affine 0\
       --early_inner_tcn_layers 0\
       --early_outer_tcn_layers 1\
-      --inner_tcn_layers 3\
-      --outer_tcn_layers 8\
+      --inner_tcn_layers 0\
+      --outer_tcn_layers 0\
       --final_div_factor 11000\
+      --inner_repatching False \
+      --outer_repatching True \
        | tee -a logs/LongForecasting/univariate/$model_name'_fS_'$model_id_name'_'$seq_len'_'$pred_len.log 
 done
