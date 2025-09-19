@@ -1,5 +1,5 @@
+torch==1.11.0
+scikit-learn
 numpy
 matplotlib
 pandas
-scikit-learn
-torch==1.11.0
