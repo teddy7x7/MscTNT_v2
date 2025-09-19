@@ -159,3 +159,4 @@ This project benefits greatly from the public codebases of previous works. We si
 - [FEDformer](https://github.com/MAZiqing/FEDformer)
 - [Autoformer](https://github.com/thuml/Autoformer)
 - [Informer](https://github.com/zhouhaoyi/Informer2020)
+- [Temporal Convolutional Networks ](https://github.com/LOCUSLAB/tcn)
