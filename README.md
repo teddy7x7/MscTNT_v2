@@ -7,7 +7,7 @@ Divides(patchifies) the long input sequence into two granularities, ie. coarse a
 
 
 <div align=center>
-<img src="pic/MscTNT_model.png" alt="MscTNT_model" width="31%"> <img src="pic/Multi_scale_structure.png" alt="Multi_scale_structure" width="33%">
+<img src="pic/MscTNT_model.png" alt="MscTNT_model" width="45%"> <img src="pic/Multi_scale_structure.png" alt="Multi_scale_structure" width="48%">
 </div>
 
 ## key Features
@@ -40,7 +40,7 @@ Divides(patchifies) the long input sequence into two granularities, ie. coarse a
     * For high-dimensional datasets such as Electricity and Traffic, which contain hundreds of features, MscTNT maintains accuracy comparable to PatchTST while overcoming out-of-memory (OOM) issues on GPUs with 24 GB of RAM, an issue PatchTST faces under similar conditions.
 
 <div align=center>
-<img src="pic/Supervised.png" alt="Supervised" width="75%">
+<img src="pic/Supervised.png" alt="Supervised" width="95%">
 </div>
 
 <br/>
@@ -72,10 +72,10 @@ Divides(patchifies) the long input sequence into two granularities, ie. coarse a
 * Alleviate symptoms of extreme large model size while forecasting numerous(hundreds) features, which PatchTST suffers from. (e.g. Electricity dataset)
 
 <div align=center>
-<img src="pic/Predict_Length.png" alt="Predict_Length" width="75%">
+<img src="pic/Predict_Length.png" alt="Predict_Length" width="95%">
 </div>
 <div align=center>
-<img src="pic/Input_Length.png" alt="Input_Length" width="75%">
+<img src="pic/Input_Length.png" alt="Input_Length" width="95%">
 </div>
 
 ### 3. Easy trade-off using Patch and Subpatch size
@@ -83,7 +83,7 @@ Divides(patchifies) the long input sequence into two granularities, ie. coarse a
 * By adjusting patch and subpatch size, the model can be easily tailored to achieve state-of-the-art predictive performance(highlighted in yellow), a compact version with competitive accuracy(highlighted in green), or a variant that strikes a balance between the two.
 
 <div align=center>
-<img src="pic/Trade-off.png" alt="Input_Length" width="75%">
+<img src="pic/Trade-off.png" alt="Input_Length" width="95%">
 </div>
 
 ## Getting Started
